@@ -1,0 +1,76 @@
+How to Build Your Own React:
+
+First Things to Know:
+1. JSX is an syntax extension for JS allows to write HTML structure within the JS code.
+
+
+Fiber is a an data structure used to represent and manage components. 
+For the Fiber Tree we have to find out its parent, child and a siblings 
+so in the code we find this function performUnitOfWork() which takes a fiber means a nextUnitofWork. So as an example : 
+
+Let's create a small DOM structure like this:
+<div id = "root">
+  <h1>Hello</h1>
+  <p>World</p>
+</div>
+
+Fiber Structure for the root:
+
+const rootFiber = {
+	type: "div",
+	props: {
+		id:"root",
+		children: [
+			{type: 'h1', props: {children: ['HEllo']}},
+			{type: 'p', props: {children: ['World'] }}.
+		],
+	},
+ parent: null,
+ child: null,    // will be set during traversal
+ sibling: null,  // will be set during traversal
+ dom: null,      // will be created during traversal
+},
+
+
+Running performUnitOfWork on rootFiber:
+
+Step 1: if (!fiber.dom) checks if the root fiber has a DOM node. Since it 	doesn't, fiber.dom = createDom(fiber) creates a <div> node with 	id="root".
+Step 2: Since the root fiber doesn't have a parent, it doesn't append the 	DOM node yet.
+Step 3: Loop through the children:
+
+	The children of the root fiber are <h1> and <p>. For each child, a 	new fiber is created:
+
+	First iteration (index 0, <h1>Hello</h1>):
+
+	A new fiber for <h1> is created and set as fiber.child.
+	Second iteration (index 1, <p>World</p>):
+
+	A new fiber for <p> is created and linked as fiber.sibling.
+
+The fiber tree now looks like this:
+rootFiber = {
+  type: 'div',
+  props: { /* ... */ },
+  dom: /* <div id="root"> */,
+  child: {
+    type: 'h1',
+    props: { children: ['Hello'] },
+    dom: null,
+    sibling: {
+      type: 'p',
+      props: { children: ['World'] },
+      dom: null,
+      sibling: null,
+    },
+  },
+};
+
+
+So we Also have to update the DOM tree so :
+To compare them we use the type:
+
+if the old fiber and the new element have the same type, we can keep the DOM node and just update it with the new props
+
+if the type is different and there is a new element, it means we need to create a new DOM node
+
+and if the types are different and there is an old fiber, we need to remove the old node
