@@ -32,25 +32,56 @@ function createTextElement(text) {
   };
 }
 function createDom(fiber) {
-  //TODO create dom nodes
   const dom =
-    element.type == "TEXT_ELEMENT"
+    fiber.type == "TEXT_ELEMENT"
       ? document.createTextNode("")
-      : document.createElement(element.type);
+      : document.createElement(fiber.type);
 
-  // we need to do here is assign the element props to the node.
-  //The function returns true if the key is not equal to "children", and false otherwise.
-  const isProperty = (key) => key !== "children";
-  Object.keys(element.props)
-    .filter(isProperty)
-    .forEach((name) => {
-      dom[name] = element.props[name];
-    });
+  updateDom(dom, {}, fiber.props);
+
   return dom;
 }
+const isEvent = (key) => key.startsWith("on");
+
+const isProperty = (key) => key !== "children" && !isEvent(key);
+const isNew = (prev, next) => (key) => prev[key] !== next[key];
+const isGone = (prev, next) => (key) => !(key in next);
 function updateDom(dom, prevProps, nextProps) {
-  // TODO
+  // Remove old or changed event listeners
+  Object.keys(prevProps)
+    .filter(isEvent) // Find all event listeners
+    .filter((key) => !(key in nextProps) || isNew(prevProps, nextProps)(key)) // If they don't exist or have changed
+    .forEach((name) => {
+      const eventType = name.toLowerCase().substring(2); // Convert "onClick" to "click"
+      dom.removeEventListener(eventType, prevProps[name]); // Remove the old event listener
+    });
+
+  // Remove old properties
+  Object.keys(prevProps)
+    .filter(isProperty) // Find all properties except events and children
+    .filter(isGone(prevProps, nextProps)) // If they don't exist in nextProps
+    .forEach((name) => {
+      dom[name] = ""; // Remove the property
+    });
+
+  // Set new or changed properties
+  Object.keys(nextProps)
+    .filter(isProperty) // Find all properties except events and children
+    .filter(isNew(prevProps, nextProps)) // If they are new or changed
+    .forEach((name) => {
+      dom[name] = nextProps[name]; // Update the property
+    });
+
+  // Add new event listeners
+  Object.keys(nextProps)
+    .filter(isEvent) // Find all event listeners
+    .filter(isNew(prevProps, nextProps)) // If they are new or changed
+    .forEach((name) => {
+      const eventType = name.toLowerCase().substring(2); // Convert "onClick" to "click"
+      dom.addEventListener(eventType, nextProps[name]); // Add the new event listener
+    });
 }
+
 function commitRoot() {
   //we recursively append all the nodes to the dom.
   deletions.forEach(commitWork);
@@ -102,7 +133,7 @@ function workLoop(deadline) {
   // You can think of requestIdleCallback as a setTimeout,
   requestIdleCallback(workLoop);
 }
-
+requestIdleCallback(workLoop);
 function performUnitOfWork(fiber) {
   //The next fiber to work on could be:
   //The current fiber's child (if it has any).
@@ -182,13 +213,23 @@ const Didact = {
   render,
 };
 /** @jsx Didact.createElement */
-const element = Didact.createElement(
-  "div",
-  { id: "foo" },
-  //WE ARE BUILDING OUR OWN FRAMEWORK SO WE NAMED AS "DIDACT"
-
-  Didact.createElement("a", null, "Hello!! World"),
-  Didact.createElement("b")
-);
 const container = document.getElementById("root");
-Didact.render(element, container);
+const rerender = (value) => {
+  const element = (
+    <div>
+      <input value={value} />
+      <h2>Hello</h2>
+    </div>
+  );
+  Didact.render(element, container);
+};
+
+rerender("asdfsdf");
+// const element = Didact.createElement(
+//   "div",
+//   { id: "foo" },
+//   //WE ARE BUILDING OUR OWN FRAMEWORK SO WE NAMED AS "DIDACT"
+
+//   Didact.createElement("a", null, "Hello!! World"),
+//   Didact.createElement("b")
+// );
